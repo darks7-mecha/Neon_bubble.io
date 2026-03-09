@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TEST FINAL</title>
+    <style>
+        body { margin: 0; background: #222; overflow: hidden; }
+        canvas { display: block; background: #000; }
+        /* Joystick à droite */
+        #base { position: absolute; bottom: 30px; right: 30px; width: 100px; height: 100px; border: 2px solid cyan; border-radius: 50%; background: rgba(0,255,255,0.1); z-index: 100; }
+        #knob { position: absolute; top: 30px; left: 30px; width: 40px; height: 40px; background: cyan; border-radius: 50%; pointer-events: none; }
+        #ui { position: absolute; top: 10px; left: 10px; color: cyan; font-family: sans-serif; z-index: 10; }
+    </style>
+</head>
+<body>
+    <div id="ui">SCORE: <span id="s">0</span></div>
+    <div id="base"><div id="knob"></div></div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // Si le script plante, on affiche une alerte direct
+        try {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const knob = document.getElementById('knob');
+            const base = document.getElementById('base');
+
+            let w = canvas.width = window.innerWidth;
+            let h = canvas.height = window.innerHeight;
+
+            let p = { x: 0, y: 0, r: 20, vx: 0, vy: 0, score: 0 };
+            let foods = [];
+            for(let i=0; i<150; i++) foods.push({x:(Math.random()-0.5)*3000, y:(Math.random()-0.5)*3000});
+
+            function move(e) {
+                e.preventDefault();
+                let t = e.touches ? e.touches[0] : e;
+                let r = base.getBoundingClientRect();
+                let dx = t.clientX - (r.left + 50);
+                let dy = t.clientY - (r.top + 50);
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if(dist > 50) { dx *= 50/dist; dy *= 50/dist; }
+                knob.style.transform = "translate("+dx+"px,"+dy+"px)";
+                p.vx = (dx/50) * 5;
+                p.vy = (dy/50) * 5;
+            }
+
+            function stop() { p.vx = 0; p.vy = 0; knob.style.transform = "translate(0,0)"; }
+
+            base.addEventListener('touchstart', move, {passive:false});
+            base.addEventListener('touchmove', move, {passive:false});
+            base.addEventListener('touchend', stop);
+
+            function loop() {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Dessin
+                ctx.fillStyle = "black";
+                ctx.fillRect(0,0,w,h);
+
+                ctx.save();
+                ctx.translate(w/2 - p.x, h/2 - p.y);
+
+                // Grille
+                ctx.strokeStyle = "#333";
+                for(let i=-1500; i<=1500; i+=150) {
+                    ctx.beginPath(); ctx.moveTo(i, -1500); ctx.lineTo(i, 1500); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(-1500, i); ctx.lineTo(1500, i); ctx.stroke();
+                }
+
+                // Food
+                ctx.fillStyle = "lime";
+                for(let f of foods) {
+                    ctx.beginPath(); ctx.arc(f.x, f.y, 5, 0, 7); ctx.fill();
+                    if(Math.abs(p.x-f.x) < p.r && Math.abs(p.y-f.y) < p.r) {
+                        f.x = (Math.random()-0.5)*3000;
+                        f.y = (Math.random()-0.5)*3000;
+                        p.r += 0.2;
+                        p.score += 10;
+                        document.getElementById('s').innerText = p.score;
+                    }
+                }
+
+                // Joueur
+                ctx.fillStyle = "cyan";
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+
+                ctx.restore();
+                requestAnimationFrame(loop);
+            }
+            loop();
+
+        } catch (e) {
+            alert("Erreur critique : " + e.message);
+        }
+    </script>
+</body>
+</html>
